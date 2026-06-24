@@ -1,0 +1,295 @@
+// Tender Intelligence — Enterprise SaaS schema
+// Multi-tenant procurement & tender monitoring platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Multi-tenancy core ────────────────────────────────────────────────
+model Tenant {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  plan          String   @default("enterprise") // starter | growth | enterprise
+  industry      String   @default("construction") // construction | consulting | defence | technology | mining
+  seatLimit     Int      @default(50)
+  status        String   @default("active") // active | suspended | trial
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users         User[]
+  teams         Team[]
+  tenders       Tender[]
+  savedSearches SavedSearch[]
+  alerts        Alert[]
+  pipeline      PipelineEntry[]
+  competitors   Competitor[]
+  reports       Report[]
+  auditLogs     AuditLog[]
+  sources       CollectionSource[]
+}
+
+model User {
+  id          String   @id @default(cuid())
+  tenantId    String
+  email       String   @unique
+  name        String
+  role        String   @default("member") // owner | admin | manager | analyst | viewer
+  avatarColor String   @default("#0d9488")
+  jobTitle    String?
+  status      String   @default("active") // active | invited | disabled
+  lastActive  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teams       TeamMember[]
+  auditLogs   AuditLog[]
+  pipeline    PipelineEntry[]
+  alerts      Alert[]
+
+  @@index([tenantId])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  color       String   @default("#0d9488")
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  pipeline    PipelineEntry[]
+
+  @@index([tenantId])
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+  role   String @default("member") // lead | member
+
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+// ─── Collection layer ──────────────────────────────────────────────────
+model CollectionSource {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  url         String
+  type        String   @default("portal") // portal | tender_site | infrastructure | rss | api
+  region      String   @default("global")
+  country     String?
+  status      String   @default("active") // active | paused | error
+  scanFreqHrs Int      @default(24)
+  lastScanAt  DateTime?
+  itemsFound  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenders     Tender[]
+
+  @@index([tenantId])
+}
+
+// ─── Tenders (core entity, AI-enriched) ────────────────────────────────
+model Tender {
+  id              String   @id @default(cuid())
+  tenantId        String
+  sourceId        String?
+  reference       String   // official tender reference number
+  title           String
+  description     String
+  buyer           String   // issuing government body / agency
+  buyerType       String   @default("government") // government | agency | utility | defence | municipal
+  country         String
+  region          String?
+  industry        String   // construction | consulting | defence | technology | mining | healthcare | infrastructure
+  category        String   // sub-category e.g. civil-works, it-services, equipment-supply
+  procurementType String   @default("open") // open | selective | negotiated | framework | rfp | rfq
+  budgetMin       Float?
+  budgetMax       Float?
+  budgetCurrency  String   @default("USD")
+  publishedAt     DateTime
+  deadlineAt      DateTime
+  durationDays    Int?
+  status          String   @default("open") // open | closing | closed | awarded | cancelled
+  url             String?
+  contactEmail    String?
+
+  // AI-enriched fields
+  summary         String?
+  riskScore       Float?   // 0-100
+  riskLevel       String?  // low | medium | high | critical
+  riskNotes       String?
+  opportunityScore Float?  // 0-100 (win probability)
+  winProbability  Float?   // 0-100
+  opportunityNotes String?
+  industries      String?  // comma-separated classification tags
+  keyRequirements String?  // comma-separated
+  embedding       String?  // serialized vector for semantic search
+  aiProcessedAt   DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source          CollectionSource? @relation(fields: [sourceId], references: [id])
+  pipelineEntries PipelineEntry[]
+  alerts          Alert[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([industry])
+  @@index([country])
+  @@index([deadlineAt])
+}
+
+// ─── Opportunity pipeline (Kanban) ─────────────────────────────────────
+model PipelineEntry {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenderId    String
+  teamId      String?
+  ownerId     String?
+  stage       String   @default("identified") // identified | qualifying | pursuing | bidding | won | lost
+  priority    String   @default("medium") // low | medium | high | critical
+  pursuitValue Float?
+  notes       String?
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tender      Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  team        Team?    @relation(fields: [teamId], references: [id])
+  owner       User?    @relation(fields: [ownerId], references: [id])
+
+  @@index([tenantId])
+  @@index([stage])
+}
+
+// ─── Competitor intelligence ───────────────────────────────────────────
+model Competitor {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  website     String?
+  industry    String
+  hqCountry   String?
+  size        String   @default("mid") // small | mid | large | enterprise
+  winRate     Float    @default(0)
+  activeBids  Int      @default(0)
+  totalWins   Int      @default(0)
+  threatLevel String   @default("medium") // low | medium | high
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  activities  CompetitorActivity[]
+
+  @@index([tenantId])
+}
+
+model CompetitorActivity {
+  id           String   @id @default(cuid())
+  competitorId String
+  type         String   // bid_won | bid_lost | new_contract | partnership | expansion | leadership_change
+  description  String
+  value        Float?
+  date         DateTime
+  createdAt    DateTime @default(now())
+
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([competitorId])
+}
+
+// ─── Search & alerts ───────────────────────────────────────────────────
+model SavedSearch {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  query       String   // natural language or structured
+  filtersJson String   // JSON of structured filters
+  notifyEmail Boolean  @default(true)
+  lastRunAt   DateTime?
+  resultCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenderId    String?
+  userId      String?
+  type        String   // new_tender | deadline_reminder | risk_change | score_change | competitor | saved_search
+  severity    String   @default("info") // info | success | warning | critical
+  title       String
+  message     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tender      Tender?  @relation(fields: [tenderId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([read])
+}
+
+// ─── Reports & market intelligence ─────────────────────────────────────
+model Report {
+  id          String   @id @default(cuid())
+  tenantId    String
+  title       String
+  type        String   // weekly | market_intelligence | pipeline_review | competitor_brief
+  periodStart DateTime
+  periodEnd   DateTime
+  summary     String
+  contentJson String   // structured sections JSON
+  status      String   @default("generated") // generating | generated | delivered
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ─── Audit logs (enterprise compliance) ────────────────────────────────
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String?
+  action      String   // login | view_tender | create_search | update_pipeline | generate_report | ai_summarize | ...
+  resource    String   // tender | pipeline | team | report | alert | settings
+  resourceId  String?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([action])
+}
