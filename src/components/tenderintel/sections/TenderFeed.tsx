@@ -180,9 +180,34 @@ export function TenderFeedSection({
         {/* Results */}
         <div>
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
-              {searching && <span className="ml-2 text-sm text-muted-foreground">Running AI semantic search…</span>}
+            <div className="space-y-3">
+              {searching && (
+                <div className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50/50 p-3 text-sm dark:border-teal-900 dark:bg-teal-950/20">
+                  <Loader2 className="h-4 w-4 animate-spin text-teal-600" />
+                  <span className="text-teal-700 dark:text-teal-300">Running AI semantic search…</span>
+                </div>
+              )}
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex gap-1.5">
+                        <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+                        <div className="h-4 w-14 animate-pulse rounded bg-muted" />
+                      </div>
+                      <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                    </div>
+                    <div className="h-12 w-12 animate-pulse rounded-full bg-muted" />
+                  </div>
+                  <div className="mt-3 h-3 w-full animate-pulse rounded bg-muted" />
+                  <div className="mt-3 flex gap-4">
+                    <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : tenders.length === 0 ? (
             <EmptyState icon={Search} title="No tenders found" description="Try adjusting your filters or search query." />

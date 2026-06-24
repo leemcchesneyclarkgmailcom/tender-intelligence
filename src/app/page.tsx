@@ -11,6 +11,9 @@ import { ReportsSection } from '@/components/tenderintel/sections/Reports'
 import { TeamsSection } from '@/components/tenderintel/sections/Teams'
 import { AuditLogsSection } from '@/components/tenderintel/sections/AuditLogs'
 import { SourcesSection } from '@/components/tenderintel/sections/Sources'
+import { CompareSection } from '@/components/tenderintel/sections/Compare'
+import { CalendarSection } from '@/components/tenderintel/sections/Calendar'
+import { AnalyticsSection } from '@/components/tenderintel/sections/Analytics'
 import { TenderDetailDrawer } from '@/components/tenderintel/TenderDetailDrawer'
 import type { DashboardData, Tender } from '@/components/tenderintel/types'
 import { Loader2 } from 'lucide-react'
@@ -93,6 +96,9 @@ export default function Home() {
             />
           )}
           {section === 'pipeline' && <PipelineSection onTenderClick={setSelectedTender} />}
+          {section === 'compare' && <CompareSection onTenderClick={setSelectedTender} />}
+          {section === 'calendar' && <CalendarSection onTenderClick={setSelectedTender} />}
+          {section === 'analytics' && <AnalyticsSection data={dashboard} />}
           {section === 'competitors' && <CompetitorsSection />}
           {section === 'searches' && <SearchesSection onTenderClick={setSelectedTender} />}
           {section === 'reports' && <ReportsSection />}

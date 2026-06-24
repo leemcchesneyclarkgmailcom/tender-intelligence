@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '../src/lib/db'
 
 const INDUSTRIES = ['construction', 'consulting', 'defence', 'technology', 'mining', 'infrastructure', 'healthcare']

@@ -104,7 +104,7 @@ export function ReportsSection() {
   return (
     <div>
       <SectionHeader
-        title="Reports & Market Intelligence"
+        title="Reports & Intelligence"
         description="AI-generated weekly digests, market intelligence summaries, and competitor briefs"
         action={
           <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => setGenOpen(true)}>

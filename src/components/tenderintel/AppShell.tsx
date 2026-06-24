@@ -36,12 +36,19 @@ import {
   Plus,
   Menu,
   X,
+  Scale,
+  CalendarClock,
+  LineChart,
 } from 'lucide-react'
+import { AIStatusPill } from './shared'
 
 export type SectionId =
   | 'dashboard'
   | 'feed'
   | 'pipeline'
+  | 'compare'
+  | 'calendar'
+  | 'analytics'
   | 'competitors'
   | 'searches'
   | 'reports'
@@ -49,13 +56,16 @@ export type SectionId =
   | 'sources'
   | 'audit'
 
-const NAV: { id: SectionId; label: string; icon: React.ComponentType<{ className?: string }>; group: string }[] = [
+const NAV: { id: SectionId; label: string; icon: React.ComponentType<{ className?: string }>; group: string; badge?: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'Overview' },
   { id: 'feed', label: 'Tender Feed', icon: Rss, group: 'Overview' },
   { id: 'pipeline', label: 'Opportunity Pipeline', icon: KanbanSquare, group: 'Workflow' },
+  { id: 'compare', label: 'Tender Comparison', icon: Scale, group: 'Workflow', badge: 'New' },
+  { id: 'calendar', label: 'Deadline Calendar', icon: CalendarClock, group: 'Workflow', badge: 'New' },
   { id: 'competitors', label: 'Competitor Intelligence', icon: Crosshair, group: 'Workflow' },
   { id: 'searches', label: 'Saved Searches & Alerts', icon: Bookmark, group: 'Workflow' },
   { id: 'reports', label: 'Reports & Intelligence', icon: FileBarChart, group: 'Workflow' },
+  { id: 'analytics', label: 'Market Analytics', icon: LineChart, group: 'Insights', badge: 'New' },
   { id: 'sources', label: 'Collection Sources', icon: Radar, group: 'Platform' },
   { id: 'teams', label: 'Teams & Permissions', icon: Users, group: 'Platform' },
   { id: 'audit', label: 'Audit Logs', icon: ScrollText, group: 'Platform' },
@@ -90,7 +100,18 @@ export function AppShell({
 }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
+  const [aiLive, setAiLive] = React.useState<boolean | null>(null)
   React.useEffect(() => setMounted(true), [])
+
+  // Probe AI health once on mount
+  React.useEffect(() => {
+    let cancelled = false
+    fetch('/api/ai-health')
+      .then((r) => r.json())
+      .then((d) => !cancelled && setAiLive(d.live === true))
+      .catch(() => !cancelled && setAiLive(false))
+    return () => { cancelled = true }
+  }, [])
 
   const groups = React.useMemo(() => {
     const map = new Map<string, typeof NAV>()
@@ -148,6 +169,11 @@ export function AppShell({
                       {totalTenders}
                     </Badge>
                   )}
+                  {item.badge && (
+                    <span className="ml-auto inline-flex items-center rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-teal-300">
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               )
             })}
@@ -157,6 +183,10 @@ export function AppShell({
 
       {/* Tenant footer */}
       <div className="border-t border-sidebar-border p-3">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">AI Engine</span>
+          <AIStatusPill live={aiLive === true} />
+        </div>
         <div className="flex items-center gap-2.5 rounded-lg bg-sidebar-accent/50 p-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-600 text-white">
             <Building2 className="h-4 w-4" />

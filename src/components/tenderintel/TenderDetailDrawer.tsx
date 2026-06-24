@@ -38,7 +38,9 @@ import {
   ListChecks,
   Tag,
   Briefcase,
+  Star,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function TenderDetailDrawer({
   tenderId,
@@ -52,11 +54,14 @@ export function TenderDetailDrawer({
   const [tender, setTender] = React.useState<Tender | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [analyzing, setAnalyzing] = React.useState(false)
+  const [bookmarked, setBookmarked] = React.useState(false)
+  const [bookmarkLoading, setBookmarkLoading] = React.useState(false)
   const { toast } = useToast()
 
   React.useEffect(() => {
     if (!tenderId) {
       setTender(null)
+      setBookmarked(false)
       return
     }
     setLoading(true)
@@ -64,7 +69,38 @@ export function TenderDetailDrawer({
       .then((r) => r.json())
       .then((data) => setTender(data))
       .finally(() => setLoading(false))
+    // Check bookmark status
+    fetch(`/api/bookmarks/${tenderId}`)
+      .then((r) => r.json())
+      .then((d) => setBookmarked(d.bookmarked === true))
+      .catch(() => setBookmarked(false))
   }, [tenderId])
+
+  const toggleBookmark = async () => {
+    if (!tenderId) return
+    setBookmarkLoading(true)
+    try {
+      if (bookmarked) {
+        // Find bookmark id — use the tenderId-based check
+        const check = await fetch(`/api/bookmarks/${tenderId}`).then((r) => r.json())
+        if (check.bookmarkId) {
+          await fetch(`/api/bookmarks/${check.bookmarkId}`, { method: 'DELETE' })
+        }
+        setBookmarked(false)
+        toast({ title: 'Bookmark removed' })
+      } else {
+        await fetch('/api/bookmarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenderId }),
+        })
+        setBookmarked(true)
+        toast({ title: 'Tender bookmarked', description: 'Find it in your saved tenders.' })
+      }
+    } finally {
+      setBookmarkLoading(false)
+    }
+  }
 
   const runAnalysis = async () => {
     if (!tenderId) return
@@ -139,6 +175,19 @@ export function TenderDetailDrawer({
                       <Sparkles className="mr-2 h-4 w-4" /> Run AI Analysis
                     </>
                   )}
+                </Button>
+                <Button
+                  variant={bookmarked ? 'default' : 'outline'}
+                  onClick={toggleBookmark}
+                  disabled={bookmarkLoading}
+                  className={bookmarked ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}
+                >
+                  {bookmarkLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Star className={cn('mr-2 h-4 w-4', bookmarked && 'fill-current')} />
+                  )}
+                  {bookmarked ? 'Bookmarked' : 'Bookmark'}
                 </Button>
                 {tender.url && (
                   <Button variant="outline" asChild>

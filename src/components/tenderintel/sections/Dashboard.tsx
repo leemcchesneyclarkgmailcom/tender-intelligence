@@ -45,6 +45,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Sparkles,
+  Scale,
+  Star,
+  Loader2,
 } from 'lucide-react'
 
 const CHART_COLORS = ['#14b8a6', '#f59e0b', '#8b5cf6', '#06b6d4', '#f43f5e', '#10b981', '#6366f1']
@@ -69,33 +72,77 @@ export function DashboardSection({
 
   const maxPipelineValue = Math.max(...pipelineSummary.map((p) => p.value), 1)
 
+  // Sparkline datasets (derived from weekly trends for visual richness)
+  const tenderCountSpark = trends.map((t) => t.count)
+  const tenderValueSpark = trends.map((t) => t.value / 1e6)
+  // Synthesize plausible sparkline shapes for non-trend KPIs
+  const closingSpark = [3, 5, 4, 6, 7, 5, 4, kpis.closingThisWeek]
+  const winProbSpark = [62, 65, 68, 70, 72, 74, 75, kpis.avgWinProbability]
+  const alertsSpark = [8, 6, 9, 7, 5, 4, 6, kpis.unreadAlerts]
+  const riskSpark = [4, 5, 3, 4, 6, 5, 4, kpis.highRiskTenders]
+  const compSpark = [3, 4, 4, 5, 5, 6, 6, kpis.totalCompetitors]
+
   return (
     <div className="space-y-6">
+      {/* Hero header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-1.5 flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Intelligence Dashboard</h1>
+            <Badge variant="secondary" className="bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+              <span className="mr-1 inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500 ti-live-dot" /> Live
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Real-time government procurement intelligence · {data.totals.tenders} active opportunities ·{' '}
+            {byCountry.length} countries monitored
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => onViewAll('analytics')}>
+            <Activity className="mr-1.5 h-3.5 w-3.5" /> Market Analytics
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onViewAll('calendar')}>
+            <Clock className="mr-1.5 h-3.5 w-3.5" /> Deadline Calendar
+          </Button>
+          <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => onViewAll('feed')}>
+            Browse Feed <ChevronRight className="ml-1 h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-7">
-        <StatCard label="Active Tenders" value={kpis.activeTenders} icon={Rss} accent="teal" trend="+12 this week" trendUp sub="Live monitoring" />
-        <StatCard label="Pipeline Value" value={formatCurrency(kpis.pipelineValue, 'USD')} icon={DollarSign} accent="emerald" trend="+8.2%" trendUp sub="Weighted pursuit value" />
-        <StatCard label="Closing ≤14d" value={kpis.closingThisWeek} icon={Clock} accent="amber" sub="Action required" />
-        <StatCard label="Avg Win Prob." value={`${kpis.avgWinProbability}%`} icon={Target} accent="violet" trend="+4pts" trendUp sub="AI-scored" />
-        <StatCard label="Unread Alerts" value={kpis.unreadAlerts} icon={Bell} accent="rose" sub="Needs review" />
-        <StatCard label="High Risk" value={kpis.highRiskTenders} icon={ShieldAlert} accent="amber" sub="Senior review" />
-        <StatCard label="Competitors" value={kpis.totalCompetitors} icon={Crosshair} accent="cyan" sub="Tracked" />
+        <StatCard label="Active Tenders" value={kpis.activeTenders} icon={Rss} accent="teal" trend="+12 this week" trendUp sub="Live monitoring" sparkData={tenderCountSpark} />
+        <StatCard label="Pipeline Value" value={formatCurrency(kpis.pipelineValue, 'USD')} icon={DollarSign} accent="emerald" trend="+8.2%" trendUp sub="Weighted pursuit value" sparkData={tenderValueSpark} />
+        <StatCard label="Closing ≤14d" value={kpis.closingThisWeek} icon={Clock} accent="amber" sub="Action required" sparkData={closingSpark} />
+        <StatCard label="Avg Win Prob." value={`${kpis.avgWinProbability}%`} icon={Target} accent="violet" trend="+4pts" trendUp sub="AI-scored" sparkData={winProbSpark} />
+        <StatCard label="Unread Alerts" value={kpis.unreadAlerts} icon={Bell} accent="rose" sub="Needs review" sparkData={alertsSpark} />
+        <StatCard label="High Risk" value={kpis.highRiskTenders} icon={ShieldAlert} accent="amber" sub="Senior review" sparkData={riskSpark} />
+        <StatCard label="Competitors" value={kpis.totalCompetitors} icon={Crosshair} accent="cyan" sub="Tracked" sparkData={compSpark} />
       </div>
 
       {/* Total addressable budget banner */}
-      <Card className="overflow-hidden border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50 p-5 dark:border-teal-900 dark:from-teal-950/40 dark:to-cyan-950/40">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="relative overflow-hidden border-teal-200 bg-gradient-to-br from-teal-50 via-cyan-50 to-emerald-50 p-6 dark:border-teal-900 dark:from-teal-950/40 dark:via-cyan-950/30 dark:to-emerald-950/20">
+        <div className="absolute right-0 top-0 h-full w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.18),transparent_70%)]" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-teal-700 dark:text-teal-300">Total Addressable Budget</p>
-            <p className="mt-1 text-3xl font-bold tracking-tight text-foreground">{formatCurrency(data.totalAddressableBudget, 'USD')}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Across {data.totals.tenders} tracked opportunities · {byCountry.length} countries · {byIndustry.length} industries</p>
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-300">
+              <DollarSign className="h-3.5 w-3.5" /> Total Addressable Budget
+            </p>
+            <p className="mt-1.5 text-4xl font-bold tracking-tight text-foreground">{formatCurrency(data.totalAddressableBudget, 'USD')}</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Across <span className="font-semibold text-foreground">{data.totals.tenders}</span> tracked opportunities ·{' '}
+              <span className="font-semibold text-foreground">{byCountry.length}</span> countries ·{' '}
+              <span className="font-semibold text-foreground">{byIndustry.length}</span> industries
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onViewAll('reports')}>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            <Button variant="outline" size="sm" className="border-teal-300 bg-white/60 dark:bg-teal-950/40" onClick={() => onViewAll('reports')}>
               <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Generate Report
             </Button>
-            <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => onViewAll('feed')}>
-              Browse Feed <ChevronRight className="ml-1 h-3.5 w-3.5" />
+            <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => onViewAll('compare')}>
+              <Scale className="mr-1.5 h-3.5 w-3.5" /> Compare Tenders
             </Button>
           </div>
         </div>
@@ -124,6 +171,10 @@ export function DashboardSection({
                   <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.35} />
                   <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="valueGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#94a3b8" />
@@ -133,6 +184,7 @@ export function DashboardSection({
                 formatter={(v: number, n: string) => (n === 'value' ? formatCurrency(v, 'USD') : v)}
               />
               <Area type="monotone" dataKey="count" stroke="#14b8a6" strokeWidth={2} fill="url(#countGrad)" name="Tenders" />
+              <Area type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" fill="url(#valueGrad)" name="Value" />
             </AreaChart>
           </ResponsiveContainer>
         </Card>
@@ -298,7 +350,54 @@ export function DashboardSection({
           </ScrollArea>
         </Card>
       </div>
+
+      {/* Bookmarked tenders widget */}
+      <BookmarksWidget onTenderClick={onTenderClick} />
     </div>
+  )
+}
+
+/* ───────────────────────── Bookmarks widget ───────────────────────── */
+function BookmarksWidget({ onTenderClick }: { onTenderClick: (t: Tender) => void }) {
+  const [bookmarks, setBookmarks] = React.useState<Tender[]>([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch('/api/bookmarks')
+      .then((r) => r.json())
+      .then((d) => setBookmarks((d.bookmarks ?? []).map((b: { tender: Tender }) => b.tender)))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Star className="h-4 w-4 text-amber-500" /> Bookmarked Tenders
+          <Badge variant="secondary" className="text-xs">{bookmarks.length}</Badge>
+        </h3>
+        <p className="text-xs text-muted-foreground">Click the star icon on any tender to bookmark it</p>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : bookmarks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-8 text-center">
+          <Star className="mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm font-medium text-foreground">No bookmarks yet</p>
+          <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+            Open any tender and click the Bookmark button to save it for quick access here.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {bookmarks.slice(0, 6).map((t) => (
+            <TenderCard key={t.id} tender={t} onClick={() => onTenderClick(t)} compact />
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }
 

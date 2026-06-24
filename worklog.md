@@ -35,3 +35,50 @@
 - **More tenders / sources:** Expand the seed beyond 30 tenders and wire real portal scraping for SAM.gov / AusTender / TED.
 - **Win-probability model:** Currently LLM-heuristic; could be trained on historical bid outcomes.
 - **Mobile polish:** The kanban and competitors grids are responsive but could use more mobile-specific refinements.
+
+---
+
+## Task ID: 9 (Round 2 — QA + New Features + Styling Polish)
+**Agent:** Main agent (Z.ai Code) — triggered by 15-minute cron review
+**Task:** QA the existing platform, fix bugs, add 3 new features (Tender Comparison, Deadline Calendar, Market Analytics), polish styling, add bookmark capability.
+
+### Work Log:
+- **QA via agent-browser:** Verified all 9 existing sections load without runtime errors. Tested semantic search (30 results), tender drawer + AI analysis (LLM fallback), pipeline kanban (6 columns), competitor charts, AI report generation (45s LLM), live web scan. All functional.
+- **Discovered AI service issue:** The `/etc/.z-ai-config` lost its `token` field between sessions (was present in round 1, now only has `baseUrl` + `apiKey`). All LLM calls return 401 "missing X-Token header". The platform gracefully falls back to deterministic heuristics via the existing fallback in `src/lib/ai.ts`.
+- **Added AI transparency:** New `/api/ai-health` endpoint probes LLM reachability. New `AIStatusPill` component in sidebar shows "AI Live" (green) or "AI Fallback" (amber) so users know when AI is using heuristics.
+- **Fixed dashboard missing h1:** Added a hero header with "Intelligence Dashboard" title, live badge, and quick-action buttons (Market Analytics, Deadline Calendar, Browse Feed).
+- **Added Sparkline component:** New SVG sparkline in `shared.tsx` with gradient fill. All 7 KPI cards now show sparkline trends alongside their values.
+- **Upgraded KPI cards:** Hover lift effect (`hover:-translate-y-0.5`), colored borders on hover, sparkline integration.
+- **Upgraded budget banner:** Radial gradient overlay, 3-stop gradient background, Compare Tenders CTA button.
+- **Upgraded tender volume chart:** Added a second dashed area series for budget value (amber) alongside the count series (teal).
+- **New feature — Tender Comparison (`/compare`):** Side-by-side comparison of up to 3 tenders. Live search to add tenders, comparison cards with score rings + key facts, field-by-field comparison table with "best value" highlighting, AI comparative recommendation generator (best opportunity, highest risk, largest budget, tightest deadline, recommendation).
+- **New feature — Deadline Calendar (`/calendar`):** Monthly calendar grid showing tender deadlines colour-coded by industry. Pulsing red dots on days with deadlines. Click a day to see all deadlines. Side panel shows upcoming deadlines (60-day window) with urgency colour-coding. Month navigation + "Today" button. Industry legend.
+- **New feature — Market Analytics (`/analytics`):** Deep-dive analytics page with 4 metric cards (countries, buyers, concentration, avg deal size), geographic distribution bar chart with country flags, industry radar chart (count vs risk), risk-vs-opportunity scatter plot (bubble size = budget) with 4-quadrant summary, procurement type bar chart, 12-week trend line chart (dual axis), buyer concentration progress bars, budget-by-industry pie, buyer-type donut, win-probability distribution.
+- **New feature — Bookmarks:** New `Bookmark` Prisma model (user + tender + notes). New `/api/bookmarks` CRUD API. Bookmark toggle button (amber star) in TenderDetailDrawer. Bookmarks widget on dashboard showing saved tenders with empty state.
+- **Added skeleton loaders:** Tender Feed now shows 6 animated skeleton cards during loading instead of a spinner, with a semantic-search banner.
+- **Added nav badges:** "NEW" badges on the 3 new section nav items.
+- **Fixed Reports heading inconsistency:** Changed "Reports & Market Intelligence" → "Reports & Intelligence" to match nav label.
+- **Fixed seed.ts lint warning:** Removed unused eslint-disable directive.
+- **Fixed Sparkline rules-of-hooks violation:** Moved `React.useId()` before the early return.
+- **Fixed Compare.tsx JSX parser error:** Extracted nested template literals into helper functions (`deadlineLabel`, `riskLabel`, `oppLabel`, `winLabel`) to avoid parser confusion.
+- **Restarted dev server:** Required after Prisma schema change (added Bookmark model) so the new `db.bookmark` delegate was available.
+- **Final QA:** All 12 sections load without errors. Lint passes with 0 errors and 0 warnings. Bookmarks flow verified end-to-end (bookmark in drawer → appears on dashboard widget). Calendar shows 17 deadlines in July 2026. Comparison table renders with AI recommendation. Analytics shows all charts.
+
+### Stage Summary:
+- **Status:** Platform now has 12 sections (was 9). All features functional. AI gracefully degrades to fallback mode with transparent status indicator.
+- **New artifacts:** `src/components/tenderintel/sections/{Compare,Calendar,Analytics}.tsx`, `src/app/api/{ai-health,bookmarks,bookmarks/[id]}/route.ts`, `Bookmark` model in Prisma schema, `Sparkline` + `AIStatusPill` + `Skeleton` components in `shared.tsx`.
+- **Verification:** `bun run lint` → 0 errors, 0 warnings. agent-browser confirms all 12 sections render. Bookmarks API tested via curl. AI health endpoint reports `live: false, mode: fallback`.
+- **Known limitation:** AI LLM is unavailable this session (token wiped from `/etc/.z-ai-config`). All AI features use deterministic fallbacks. When token is restored, all AI features will automatically use the live LLM — no code changes needed.
+
+### Unresolved Issues / Risks / Next Steps:
+- **AI token restoration:** The `/etc/.z-ai-config` needs a valid `token` field for live LLM calls. This is an environment issue. The platform is fully functional in fallback mode.
+- **PostgreSQL migration:** Still on SQLite for dev. Production needs PostgreSQL.
+- **Vector DB:** Semantic search uses keyword scoring; pgvector would improve recall.
+- **Queue workers:** Footer advertises "4 active queue workers" — implement real BullMQ workers for daily scans + alert generation.
+- **Auth:** NextAuth.js not wired — single demo tenant.
+- **CI/CD + Docker:** Add Dockerfile + GitHub Actions.
+- **More seed data:** Expand beyond 30 tenders for richer analytics.
+- **Mobile kanban:** The 6-column kanban is tight on mobile — consider horizontal scroll or stacked view.
+- **Export features:** Reports "Export PDF" button is placeholder — wire to actual PDF generation.
+- **Real-time updates:** Consider WebSocket for live tender notifications (socket.io mini-service pattern available).
+

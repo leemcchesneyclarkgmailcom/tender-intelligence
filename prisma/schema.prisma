@@ -52,6 +52,7 @@ model User {
   auditLogs   AuditLog[]
   pipeline    PipelineEntry[]
   alerts      Alert[]
+  bookmarks   Bookmark[]
 
   @@index([tenantId])
 }
@@ -149,12 +150,28 @@ model Tender {
   source          CollectionSource? @relation(fields: [sourceId], references: [id])
   pipelineEntries PipelineEntry[]
   alerts          Alert[]
+  bookmarks       Bookmark[]
 
   @@index([tenantId])
   @@index([status])
   @@index([industry])
   @@index([country])
   @@index([deadlineAt])
+}
+
+// ─── Bookmarks (user favourites) ───────────────────────────────────────
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  tenderId  String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tender    Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenderId])
+  @@index([userId])
 }
 
 // ─── Opportunity pipeline (Kanban) ─────────────────────────────────────
