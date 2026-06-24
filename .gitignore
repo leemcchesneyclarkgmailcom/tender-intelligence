@@ -31,7 +31,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env*.local
 
 # vercel
 .vercel
@@ -48,6 +50,16 @@ dev.log
 dev.out.log
 test
 prompt
+
+# database
+db/*.db
+db/*.db-journal
+db/*.sqlite
+db/*.sqlite3
+
+# runtime / pid files
+.zscripts/dev.pid
+*.pid
 
 server.log
 # Skills directory

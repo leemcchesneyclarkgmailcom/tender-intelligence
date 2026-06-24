@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+
+# Next.js build output
+.next
+out
+build
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+dev.log
+server.log
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Z.ai config (mount at runtime instead)
+.z-ai-config
+
+# Database files
+db/*.db
+db/*.db-journal
+db/*.sqlite
+db/*.sqlite3
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# CI/CD
+.github
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+LICENSE
+worklog.md
+
+# Runtime
+.zscripts/dev.pid
+*.pid
